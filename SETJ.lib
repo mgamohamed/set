@@ -1,0 +1,49 @@
+.subckt SETJ N1 N2  PARAMS: 
++VCR=0.008 
++CJ=1e-18 
++RJ=1e6 
++TEMP=70
+
+.PARAM E=1.60217733E-19            ;  Electron charge
+.PARAM KB=1.380658E-23             ;  Boltzmann's constant
+
+.FUNC GammaR(v1,v2) { IF(TEMP==0,IF((-1*(VCR-(v1-v2)))<0,(VCR-(v1-v2))/RJ,0),
+	+IF((VCR-(v1-v2))==0,KB*TEMP/RJ,
+	+(VCR-(v1-v2))/(1-EXP(-1*E/KB*(VCR-(v1-v2))/TEMP))/RJ)) }
+
+.FUNC GammaL(v1,v2) { IF(TEMP==0,IF((-1*(VCR-(v1-v2)))<0,(VCR-(v1-v2))/RJ,0),
+	+IF((VCR-(v1-v2))==0,KB*TEMP/RJ,
+	+(VCR-(v1-v2))/(1-EXP(-1*E/KB*(VCR-(v1-v2))/TEMP))/RJ)) }
+
+
+R_R2         N1 N2  1e9
+C_C1         N1 N2  {CJ}
+G1 	     N1 N2  VALUE {-1*(GammaR(V(N1),V(N2))-GammaL(V(N2),V(N1)))}
+E_LIMIT1         N694961 N2 VALUE {STP(V(N69734)-V(N2))}
+E_LIMIT2         N69644 N2 VALUE {STP(V(N69520)-V(N2))}
+X_U6    N1 N69326 N69520 N2 SCHEMATIC1_U6
+X_G1    N2 N2 N1 N69454 SCHEMATIC1_G1 
+X_U7    N69570 N69574 N69734 N2 SCHEMATIC1_U7 
+X_U1         N694961 N69454 awbdelay PARAMS: DELAY=180e-18
+C_C2         N69644 N69570  16.022e-18  
+R_R1         N69570 N2  10  
+V_V4         N69574 N2 0.37Vdc
+V_V5         N69326 N2 {VCR}  
+.ends SETJ
+
+
+.subckt SCHEMATIC1_U6 IN1 IN2 OUT gf 
+E_U6         OUT gf POLY(2) IN1 gf IN2 gf 0 1 -1
+R_U6         OUT gf 1MEG
+.ends SCHEMATIC1_U6
+
+.subckt SCHEMATIC1_G1 NI NVC PI PVC  
+G_G1         PI NI PVC NVC 1m
+EDUMMY_G1         NODE_G1 0 VALUE ={1} 
++ERROR={ERROR(1m==0,"ZERO VALUED COMPONENT")}
+.ends SCHEMATIC1_G1
+
+.subckt SCHEMATIC1_U7 IN1 IN2 OUT gf 
+E_U7         OUT gf POLY(2) IN1 gf IN2 gf 0 1 -1
+R_U7         OUT gf 1MEG
+.ends SCHEMATIC1_U7

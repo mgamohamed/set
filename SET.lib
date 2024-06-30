@@ -1,0 +1,104 @@
+*single electron transistor
+*connections: drain
+*             | source
+*             | | gate1
+*             | | | gate2
+*             | | | |
+.SUBCKT SET   1 2 3 4 PARAMS:    
+    +C1=1E-18                      ;  Capacitance of junction 1
+    +C2=1E-18                      ;  Capacitance of junction 2
+    +R1=1E6                        ;  Resistance of junction 1
+    +R2=1E6                        ;  Resistance of junction 2  
+    +Cg1=1E-18                     ;  Capacitance of gate 1
+    +Cg2=0                         ;  Capacitance of gate 2
+    +C0=0                          ;  Self Capacitance of the island
+    +Q0=0                          ;  Offset charge in terms of E
+    +TEMP=4.2                      ;  Temperature
+
+.PARAM E=1.60217733E-19            ;  Electron charge
+.PARAM KB=1.380658E-23             ;  Boltzmann's constant
+.PARAM CSUM={C1+C2+Cg1+Cg2+C0}     ;  The total capacitance of the SET 
+
+
+.FUNC Q(v1,v2,v3,v4) { Cg1*v3+Cg2*v4+C1*v1+C2*v2+Q0*E }           ;  Definition of a charge term
+
+.FUNC N_OPT(v1,v2,v3,v4) { FLOOR(Q(v1,v2,v3,v4)/E+(CSUM/E)*(v1*R2+v2*R1)/(R1+R2)) }    ;  The most probable charge on the island in units of e
+
+.FUNC GAMMA(u,R) { IF(TEMP==0,IF(u<0,-u*E*E/R,0),IF(u==0,KB*TEMP/(R*E*E),-u/(1-EXP(u*E*E/KB/CSUM/TEMP))/(R*CSUM))) }   ;  The rate function
+
+.FUNC G1L(n,v1,v2,v3,v4) {GAMMA((E/2 - (v1*(C2+Cg1+Cg2)-v2*C2-v3*Cg1-v4*Cg2+n*E+Q0*E))/E,R1)}
+.FUNC G1R(n,v1,v2,v3,v4) {GAMMA((E/2 + (v1*(C2+Cg1+Cg2)-v2*C2-v3*Cg1-v4*Cg2+n*E+Q0*E))/E,R1)}
+.FUNC G2L(n,v1,v2,v3,v4) {GAMMA((E/2 - (v1*C1-v2*(C1+Cg1+Cg2)+v3*Cg1+v4*Cg2-n*E-Q0*E))/E,R2)}
+.FUNC G2R(n,v1,v2,v3,v4) {GAMMA((E/2 + (v1*C1-v2*(C1+Cg1+Cg2)+v3*Cg1+v4*Cg2-n*E-Q0*E))/E,R2)}
+
+.FUNC P_1(n,v1,v2,v3,v4) {(G2R(n,v1,v2,v3,v4)+G1L(n,v1,v2,v3,v4))
+			+/(G2L(n-1,v1,v2,v3,v4)+G1R(n-1,v1,v2,v3,v4))}
+
+.FUNC P_2(n,v1,v2,v3,v4) {((G2R(n-1,v1,v2,v3,v4)+G1L(n-1,v1,v2,v3,v4))
+			+/(G2L(n-2,v1,v2,v3,v4)+G1R(n-2,v1,v2,v3,v4)))*P_1(n,v1,v2,v3,v4)}
+
+.FUNC P_3(n,v1,v2,v3,v4) {((G2R(n-2,v1,v2,v3,v4)+G1L(n-2,v1,v2,v3,v4))
+			+/(G2L(n-3,v1,v2,v3,v4)+G1R(n-3,v1,v2,v3,v4)))*P_2(n,v1,v2,v3,v4)}
+
+.FUNC P_4(n,v1,v2,v3,v4) {((G2R(n-3,v1,v2,v3,v4)+G1L(n-3,v1,v2,v3,v4))
+			+/(G2L(n-4,v1,v2,v3,v4)+G1R(n-4,v1,v2,v3,v4)))*P_3(n,v1,v2,v3,v4)}
+
+.FUNC P_5(n,v1,v2,v3,v4) {((G2R(n-4,v1,v2,v3,v4)+G1L(n-4,v1,v2,v3,v4))
+			+/(G2L(n-5,v1,v2,v3,v4)+G1R(n-5,v1,v2,v3,v4)))*P_4(n,v1,v2,v3,v4)}
+
+.FUNC P_6(n,v1,v2,v3,v4) {((G2R(n-5,v1,v2,v3,v4)+G1L(n-5,v1,v2,v3,v4))
+			+/(G2L(n-6,v1,v2,v3,v4)+G1R(n-6,v1,v2,v3,v4)))*P_4(n,v1,v2,v3,v4)}
+        
+.FUNC P1(n,v1,v2,v3,v4) {(G2L(n,v1,v2,v3,v4)+G1R(n,v1,v2,v3,v4))
+			+/(G2R(n+1,v1,v2,v3,v4)+G1L(n+1,v1,v2,v3,v4))}
+
+.FUNC P2(n,v1,v2,v3,v4) {((G2L(n+1,v1,v2,v3,v4)+G1R(n+1,v1,v2,v3,v4))
+			+/(G2R(n+2,v1,v2,v3,v4)+G1L(n+2,v1,v2,v3,v4)))*P1(n,v1,v2,v3,v4)}
+
+.FUNC P3(n,v1,v2,v3,v4) {((G2L(n+2,v1,v2,v3,v4)+G1R(n+2,v1,v2,v3,v4))
+			+/(G2R(n+3,v1,v2,v3,v4)+G1L(n+3,v1,v2,v3,v4)))*P1(n,v1,v2,v3,v4)}
+   
+.FUNC Pn(n,v1,v2,v3,v4) {1 / ( 1 + P_6(n,v1,v2,v3,v4) + P_5(n,v1,v2,v3,v4) + P3(n,v1,v2,v3,v4)
+			++ P_4(n,v1,v2,v3,v4) + P_3(n,v1,v2,v3,v4) + P_2(n,v1,v2,v3,v4) 
+			++ P_1(n,v1,v2,v3,v4) + P1(n,v1,v2,v3,v4) + P2(n,v1,v2,v3,v4) )}
+
+.FUNC Pn_1(n,v1,v2,v3,v4) {P_1(n,v1,v2,v3,v4)*Pn(n,v1,v2,v3,v4)}
+.FUNC Pn_2(n,v1,v2,v3,v4) {P_2(n,v1,v2,v3,v4)*Pn(n,v1,v2,v3,v4)}
+.FUNC Pn_3(n,v1,v2,v3,v4) {P_3(n,v1,v2,v3,v4)*Pn(n,v1,v2,v3,v4)}
+.FUNC Pn_4(n,v1,v2,v3,v4) {P_4(n,v1,v2,v3,v4)*Pn(n,v1,v2,v3,v4)}
+.FUNC Pn_5(n,v1,v2,v3,v4) {P_5(n,v1,v2,v3,v4)*Pn(n,v1,v2,v3,v4)}
+.FUNC Pn_6(n,v1,v2,v3,v4) {P_6(n,v1,v2,v3,v4)*Pn(n,v1,v2,v3,v4)}
+.FUNC Pn1(n,v1,v2,v3,v4)  { P1(n,v1,v2,v3,v4)*Pn(n,v1,v2,v3,v4)}
+.FUNC Pn2(n,v1,v2,v3,v4)  { P2(n,v1,v2,v3,v4)*Pn(n,v1,v2,v3,v4)}
+.FUNC Pn3(n,v1,v2,v3,v4)  { P3(n,v1,v2,v3,v4)*Pn(n,v1,v2,v3,v4)}
+
+.FUNC CURRENT(n,v1,v2,v3,v4) { E*(Pn(n,v1,v2,v3,v4)*(G2L(n,v1,v2,v3,v4)-G2R(n,v1,v2,v3,v4))
+		++Pn_1(n,v1,v2,v3,v4)*(G2L(n-1,v1,v2,v3,v4)-G2R(n-1,v1,v2,v3,v4))
+		++Pn_2(n,v1,v2,v3,v4)*(G2L(n-2,v1,v2,v3,v4)-G2R(n-2,v1,v2,v3,v4))
+		++Pn_3(n,v1,v2,v3,v4)*(G2L(n-3,v1,v2,v3,v4)-G2R(n-3,v1,v2,v3,v4))
+		++Pn_4(n,v1,v2,v3,v4)*(G2L(n-4,v1,v2,v3,v4)-G2R(n-4,v1,v2,v3,v4))
+		++Pn_5(n,v1,v2,v3,v4)*(G2L(n-5,v1,v2,v3,v4)-G2R(n-5,v1,v2,v3,v4))
+		++Pn_6(n,v1,v2,v3,v4)*(G2L(n-6,v1,v2,v3,v4)-G2R(n-6,v1,v2,v3,v4))
+		++ Pn1(n,v1,v2,v3,v4)*(G2L(n+1,v1,v2,v3,v4)-G2R(n+1,v1,v2,v3,v4))
+		++ Pn2(n,v1,v2,v3,v4)*(G2L(n+2,v1,v2,v3,v4)-G2R(n+2,v1,v2,v3,v4))
+		++ Pn3(n,v1,v2,v3,v4)*(G2L(n+3,v1,v2,v3,v4)-G2R(n+3,v1,v2,v3,v4)))}
+
+.FUNC VOLTAGE(n,v1,v2,v3,v4) { Pn(n,v1,v2,v3,v4)*(n*E+Q(v1,v2,v3,v4))/CSUM
+		++Pn_1(n,v1,v2,v3,v4)*((n-1)*E+Q(v1,v2,v3,v4))/CSUM
+		++Pn_2(n,v1,v2,v3,v4)*((n-2)*E+Q(v1,v2,v3,v4))/CSUM
+		++Pn_3(n,v1,v2,v3,v4)*((n-3)*E+Q(v1,v2,v3,v4))/CSUM
+		++Pn_4(n,v1,v2,v3,v4)*((n-4)*E+Q(v1,v2,v3,v4))/CSUM
+		++Pn_5(n,v1,v2,v3,v4)*((n-5)*E+Q(v1,v2,v3,v4))/CSUM
+		++Pn_6(n,v1,v2,v3,v4)*((n-6)*E+Q(v1,v2,v3,v4))/CSUM
+		++ Pn1(n,v1,v2,v3,v4)*((n+1)*E+Q(v1,v2,v3,v4))/CSUM
+		++ Pn2(n,v1,v2,v3,v4)*((n+2)*E+Q(v1,v2,v3,v4))/CSUM
+		++ Pn3(n,v1,v2,v3,v4)*((n+3)*E+Q(v1,v2,v3,v4))/CSUM}
+
+E1 5 0 VALUE {VOLTAGE(N_OPT(V(1),V(2),V(3),V(4)),V(1),V(2),V(3),V(4))}     ;  Voltage of the island
+G1 1 2 VALUE {CURRENT(N_OPT(V(1),V(2),V(3),V(4)),V(1),V(2),V(3),V(4))}     ;  Current from source to drain
+CT1 1 5 {C1}
+CT2 2 5 {C2}
+CGATE1 3 5 {Cg1}
+CGATE2 4 5 {Cg2}
+.ENDS SET
+
